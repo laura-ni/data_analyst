@@ -1,0 +1,680 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
+XIAOLING NI
+R Case Study
+========================================================
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+# Load all of the packages that you end up using in your analysis in this code
+# chunk.
+
+# Notice that the parameter "echo" was set to FALSE for this code chunk. This
+# prevents the code from displaying in the knitted HTML output. You should set
+# echo=FALSE for all code chunks in your file, unless it makes sense for your
+# report to show the code that generated a particular plot.
+
+# The other parameters for "message" and "warning" should also be set to FALSE
+# for other code chunks once you have verified that each plot comes out as you
+# want it to. This will clean up the flow of your report.
+
+library('ggplot2')
+library('gridExtra')
+library('plyr')
+library('dplyr')
+library('tidyr')
+library('GGally')
+
+```
+
+```{r echo=FALSE, Load_the_Data}
+# Load the Data
+wine <- read.csv('/Users/laura/repos/data_analyst_old/R/project/wineQualityReds.csv', header = TRUE)
+df <- subset(wine, select=-c(X))
+```
+
+
+####Data Introduction:
+
+I will analyse the wine data. There are 11 variables on the chemical properties of the wine. I want to find out how the  chemical properties influence the quality of red wines.
+
+# Univariate Analysis
+
+The wine data has 12 chemicals and 1599 observations. All the value of the data is numeric. I will check the chemicals one by one first.
+
+```{r echo=FALSE, Univariate_Plots}
+str(df)
+```
+
+We can see all the data are numerical.
+
+```{r}
+sum(is.na(df))
+```
+
+There is no missing value in the data.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+summary(df$quality)
+```
+  
+Here's a brief summary of the wine quality.
+
+```{r}
+df$Gquality <- as.factor(df$quality)
+summary(df$quality)
+```
+
+I will add a new categorical varaible 'Gquality' from the original 'quality' variable to analyse the quality of wine.
+
+
+```{r echo=FALSE,message=FALSE, warning=FALSE}
+ggplot(aes(x = quality), data = wine) +
+  geom_bar(limits = c(3,8), breaks = seq(3,8,1))
+
+```
+
+The average score of wine is 5.636. Among 1599 wines, 681 wines are tated 5; 638 wines are rated 6; 199 wines are rated 7 and only 18 wines are rated 8. The lower 25% of wines are rated for 3 and 4. 50% of the wines are rated for 5 or 6. 25% of the top wines are rated from 6 to 8.
+
+```{r echo=FALSE,message=FALSE, warning=FALSE}
+summary(df$fixed.acidity)
+```
+
+```{r echo=FALSE,message=FALSE, warning=FALSE}
+
+ggplot(aes(x = fixed.acidity), data = df) +
+  geom_histogram(bins = 50)+
+  scale_x_continuous(breaks = seq(4,16,1))
+```
+
+The fixed.acidity is almost normally distributed. It's ranged from 4.6 to 15.9. There're some outlier on the right. I will remove these outliers.
+IQR = Q3-Q1 = 9.2-7.1 = 2.1
+Upper fence = Q3 +1.5 IQR = 9.2 + 1.5*2.1 = 12.35
+So, I will remove the data with fixed.acidity above 12.35.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(aes(x = fixed.acidity), data = subset(df, fixed.acidity < 12.35)) +
+  geom_histogram(bins = 50)+
+  scale_x_continuous(breaks = seq(4,13,1))
+```
+
+This is the plot without outliers.
+
+```{r echo=FALSE}
+summary(df$volatile.acidity)
+```
+
+```{r echo=FALSE,message=FALSE, warning=FALSE}
+ggplot(aes(x = volatile.acidity), data = df) +
+  geom_histogram(bins = 50)+
+  scale_x_continuous(breaks = seq(0.1, 1.6, 0.1))
+```
+
+The volatile.acidity is almost normally distributed. There're several outliers on the right end.
+IQR = Q3-Q1 = 0.64 - 0.39 = 0.25
+Upper fence = Q3 +1.5 IQR = 0.64 + 1.5*0.25 = 1.015
+So, I will remove the data with volatile.acidity above 1.015.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(aes(x = volatile.acidity), data = subset(df, volatile.acidity < 1.015)) +
+  geom_histogram(bins = 50)+
+  scale_x_continuous(breaks = seq(0.1, 1.1, 0.1))
+```
+
+This is the plot without outliers.
+
+```{r echo=FALSE}
+summary(df$citric.acid)
+```
+```{r echo=FALSE,message=FALSE, warning=FALSE}
+ggplot(aes(x = citric.acid), data = df) +
+  geom_histogram(bins = 50)+
+  scale_x_continuous(breaks = seq(0, 1, 0.1))
+```
+
+Regarding the citric.acid. There are some peaks of the values, such as 0 and 0.5.
+IQR = Q3-Q1 = 0.42 - 0.09 = 0.33
+Upper fence = Q3 +1.5 IQR = 0.42 + 1.5*0.33 = 0.915
+So, I will remove the data with volatile.acidity above 0.915.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(aes(x = citric.acid), data = subset(df,citric.acid < 0.915)) +
+  geom_histogram(bins = 50)+
+  scale_x_continuous(breaks = seq(0, 1, 0.1))
+```
+
+This is the plot without outliers
+
+```{r echo=FALSE,message=FALSE, warning=FALSE}
+summary(df$residual.sugar)
+```
+
+```{r echo=FALSE}
+ggplot(aes(x = residual.sugar), data = df) +
+  geom_histogram(bins = 50) +
+  scale_x_continuous(breaks = seq(0, 16, 1))
+```
+
+75% of the residual.sugar is between 0.9 and 2.6. The top 25% of the residual.sugar varies a lot. There some ouliers on the right side.
+IQR = Q3-Q1 = 2.6 - 1.9 = 0.7
+Upper fence = Q3 +1.5 IQR = 2.6 + 1.5*0.7 = 3.65
+So, I will remove the data with residual.sugar above 3.65.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(aes(x = residual.sugar), data = subset(df,residual.sugar < 3.65)) +
+  geom_histogram(bins = 25) +
+  scale_x_continuous(breaks = seq(0, 4, .2))
+```
+
+This is the plot without outliers.
+
+```{r echo=FALSE}
+summary(df$chlorides)
+```
+
+```{r echo=FALSE,message=FALSE, warning=FALSE}
+ggplot(aes(x = chlorides), data = df) +
+  geom_histogram(bins = 50) +
+  scale_x_continuous(breaks = seq(0, 0.7, 0.1))
+```
+
+Except some outliers on the right, the chlorides is almost normally distributed.
+IQR = Q3-Q1 = 0.09 - 0.07 = 0.02
+Upper fence = Q3 +1.5 IQR = 0.09 + 1.5*0.02 = 0.12
+Lower fence = Q1 - 1.5IQR = 0.07-0.03= 0.04
+So, I will remove the data with chlorides above 0.12 and the data below 0.04 .
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(aes(x = chlorides), data = subset(df, chlorides < 0.12 & chlorides > 0.04)) +
+  geom_histogram(bins = 30) +
+  scale_x_continuous(breaks = seq(0.04, 0.14, 0.02))
+```
+
+This is the plot without outliers.
+
+```{r echo=FALSE}
+summary(df$free.sulfur.dioxide)
+```
+
+```{r echo=FALSE,message=FALSE, warning=FALSE}
+ggplot(aes(x = free.sulfur.dioxide), data = df) +
+  geom_histogram(bins = 50) +
+  scale_x_continuous(breaks = seq(0, 75, 5))
+```
+
+The free.sulful.doxide has many peaks. It's generally right skewed.
+IQR = Q3-Q1 = 21 - 7 = 14
+Upper fence = Q3 +1.5 IQR = 21 + 21 = 42
+So, I will remove the data with free.sulfur.dioxide above 42.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(aes(x = free.sulfur.dioxide), data = subset(df, free.sulfur.dioxide < 42)) +
+  geom_histogram(bins = 25) +
+  scale_x_continuous(breaks = seq(0, 45, 2))
+```
+
+This is the plot without outliers.
+
+```{r echo=FALSE}
+summary(df$total.sulfur.dioxide)
+```
+
+```{r echo=FALSE,message=FALSE, warning=FALSE}
+ggplot(aes(x = total.sulfur.dioxide), data = df) +
+  geom_histogram(bins = 50) + 
+  scale_x_continuous(breaks = seq(0, 300, 20))
+```
+
+The distribution is right skewed and have some outliers.
+IQR = Q3-Q1 = 62 - 22 = 40
+Upper fence = Q3 +1.5 IQR = 62 + 60 = 122
+So, I will remove the data with total.sulfur.dioxide above 122.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(aes(x = total.sulfur.dioxide), data = subset(df, total.sulfur.dioxide < 122)) +
+  geom_histogram(bins = 50) + 
+  scale_x_continuous(breaks = seq(0, 122, 5))
+```
+
+This is the plot without outliers.
+
+```{r echo=FALSE }
+summary(df$density)
+```
+
+```{r echo=FALSE,message=FALSE, warning=FALSE}
+ggplot(aes(x = density), data = df) +
+  geom_histogram(bins = 50)
+ 
+```
+
+The density is almost normally distributed. There're some outliers at both side.
+IQR = Q3-Q1 = 0.9978 - 0.9956 = 0.0022
+Upper fence = Q3 +1.5IQR = 0.9978 + 0.0033 = 1.0011
+Lower fence = Q1 - 1.5IQR = 0.9956 - 0.0033 = 0.9923
+So, I will remove the data with density above 1.0011 and below 0.9923.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(aes(x = density), data = subset(df, density > 0.9923 & density < 1.0011)) +
+  geom_histogram(bins = 50)
+```
+
+This is the plot without outliers.
+
+```{r echo=FALSE}
+summary(df$pH)
+```
+
+```{r echo=FALSE,message=FALSE, warning=FALSE}
+ggplot(aes(x = pH), data = df) +
+  geom_histogram(bins = 50) 
+```
+
+The values of pH are almost normally distributed.
+IQR = Q3-Q1 = 3.4 - 3.21 = 0.19
+Upper fence = Q3 +1.5IQR = 3.4 + 0.285 = 3.685
+Lower fence = Q1 - 1.5IQR = 3.21 - 0.285 = 2.925
+So, I will remove the data with pH above 3.685 and below 2.925.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(aes(x = pH), data = subset(df, pH > 2.925 & pH < 3.685)) +
+  geom_histogram(bins = 25) 
+```
+
+
+```{r echo=FALSE}
+summary(df$sulphates)
+```
+
+```{r echo=FALSE,message=FALSE, warning=FALSE}
+ggplot(aes(x = sulphates), data = df) +
+  geom_histogram(bins = 50) 
+```
+
+For sulphates, there're some outliers on the right side.
+IQR = Q3-Q1 = 0.73 - 0.55 = 0.18
+Upper fence = Q3 +1.5IQR = 0.73 + 0.27 = 1
+So, I will remove the data with sulphates above 1.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE }
+ggplot(aes(x = sulphates), data = subset(df, sulphates <1)) +
+  geom_histogram(bins = 30) 
+```
+
+This is the plot without outliers.
+
+```{r echo=FALSE}
+summary(df$alcohol)
+```
+
+```{r echo=FALSE,message=FALSE, warning=FALSE}
+ggplot(aes(x = alcohol), data = df) +
+  geom_histogram(bins = 50)
+```
+
+The alcohol value is right skewed.
+IQR = Q3-Q1 = 11.1 - 9.5 = 1.6
+Upper fence = Q3 +1.5IQR = 11.1 + 2.4 = 13.5
+So, I will remove the data with alcohol above 13.5.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(aes(x = alcohol), data = subset(df, alcohol < 13.5)) +
+  geom_histogram(bins = 30)
+```
+
+This is the plot without outliers.
+
+```{r}
+nrow(df)
+df_new <- subset(df, fixed.acidity < 12.35 &
+                  volatile.acidity < 1.015 &
+                  citric.acid < 0.915 &
+                  residual.sugar < 3.65 &
+                  chlorides > 0.04 & chlorides < 0.12 &
+                  free.sulfur.dioxide < 42 &
+                  total.sulfur.dioxide < 122 &
+                  density > 0.9923 & density < 1.0011 &
+                  pH > 2.925 & pH < 3.685 &
+                  sulphates < 1)
+nrow(df_new)
+```
+
+I will create a new dataset without the outliers. The new dataset has 1192 observations. 407 observations are removed from the original dataset.
+
+###Summarize
+ 
+According to the histogram plots, the distributions of the chemicals seem normal to me. There're some outliers in the dataset. I removed them from the dataset.Most of the chemicals are distributed in a certain range. I created a categorical variable for the wine quality, since that's what I want to look into. 
+
+# Bivariate Analysis
+
+
+```{r echo=FALSE ,message=FALSE, warning=FALSE, fig.height = 30, fig.width = 16}
+library(ggplot2)
+library(GGally)
+
+
+lowerFn <- function(data, mapping, ...) {
+  p <- ggplot(data = data, mapping = mapping) +
+    geom_point(color = 'blue', alpha=0.3, size= 1) +
+    geom_smooth(color = 'black', method='lm', size=1,...)
+  
+}
+g <- ggpairs( 
+  data = df_new,
+  
+  lower = list(
+    continuous =  wrap(lowerFn) #wrap("smooth", alpha = 0.3, color = "blue", lwd=1) 
+  ),
+  upper = list(continuous = wrap("cor", size = 3 ))
+)
+
+
+print(g)
+
+```
+
+According to the catterplots and the corelation coefficient above, I found some related variables. I will list them below: 
+free.sulfur.dioxide & total.sulfur.dioxide (corelation coefficient: 0.622),
+fixed.acidity & pH (corelation coefficient: -0.684),
+fixed.acidity & citric acid ( corelation coefficient: 0.662),
+fixed.acidity & density (corelation coefficient: 0.608),
+volatile.acidity & citric.acid (corelation coefficient: -0.628),
+citric.acid & pH (corelation coefficient: -0.474),
+chlorides & density (corelation coefficient: 0.413).
+      
+```{r echo=FALSE , fig.height = 12, fig.width = 12}
+p1 <- ggplot(aes(x = Gquality, y = fixed.acidity), data = df_new) +
+  geom_boxplot()
+p2 <- ggplot(aes(x = Gquality, y = volatile.acidity), data = df_new) +
+  geom_boxplot()
+p3 <- ggplot(aes(x = Gquality, y = citric.acid), data = df_new) +
+  geom_boxplot()
+p4 <- ggplot(aes(x = Gquality, y = residual.sugar), data = df_new) +
+  geom_boxplot()
+p5 <- ggplot(aes(x = Gquality, y = chlorides), data = df_new) +
+  geom_boxplot()
+p6 <- ggplot(aes(x = Gquality, y = free.sulfur.dioxide), data = df_new) +
+  geom_boxplot()
+p7 <- ggplot(aes(x = Gquality, y = total.sulfur.dioxide), data = df_new) +
+  geom_boxplot()
+p8 <- ggplot(aes(x = Gquality, y = density), data = df_new) +
+  geom_boxplot()
+p9 <- ggplot(aes(x = Gquality, y = pH), data = df_new) +
+  geom_boxplot()
+p10 <- ggplot(aes(x = Gquality, y = sulphates), data = df_new) +
+  geom_boxplot()
+p11 <- ggplot(aes(x = Gquality, y = alcohol), data = df_new) +
+  geom_boxplot()
+grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, ncol = 2)
+```
+
+Since I am looking for chemicals that influence the quality of wine. I will compare the quality variable to the other variables. I will especially focus on good wines which are rated for 6, 7 and 8.I am using boxplots to discover the relations.
+The volatile.acidity has a negative relation with the quality.
+The citric.acidity has a positive relation with the quality. The wine rated for 7 and 8 generally have high level of citric.acid.
+The free.sulfur.dioxide has a slightly negative relation with the quality of wine rated for 6, 7 and 8.
+The total.sulfur.dioxide has a slight negative relation with the quality of wine rate for 5, 6, 7 and 8.
+The density has a  negative relation with the quality of wine rate for 6, 7 and 8.
+The sulphates has a positive relation with the quality of wine rate for 5, 6, 7 and 8.
+The alcohol has a positive relation with the quality of wine rate for 5, 6, 7 and 8.
+
+###Summary
+
+I used to data without outliers to study the relations between two chemicals and especially the relations of chemicals and the wine quality. I will continue the analysis based on the results.
+
+# Multivariate Analysis
+
+According to the bivariate analysis, I can get 3 groups of data - chemicals that have have relations to each other, chemicals that have positive relations with the wine quality, chemicals that have negative relations with the wine quality. I will analyse these groups of data with the wine quality to see the cumulative influence of two chemicals on the wine quality.
+
+Groups of chemicals thant have positive relation with the wine quality:
+citric.acid,
+alcohol,
+sulphates,
+fixed.acidity.
+
+Groups of chemicals thant have negativek.li relation with the wine quality:
+volatile.acid,
+density,
+pH,
+-total.sulfur.dioxid.
+
+Groups of chemicas that chemicals that have relations to each other:
+free.sulfur.dioxide & total.sulfur.dioxide (corelation coefficient: 0.622),
+fixed.acidity & pH (corelation coefficient: -0.684),
+fixed.acidity & citric acid ( corelation coefficient: 0.662),
+fixed.acidity & density (corelation coefficient: 0.608),
+volatile.acidity & citric.acid (corelation coefficient: -0.628),
+citric.acid & pH (corelation coefficient: -0.474),
+chlorides & density (corelation coefficient: 0.413).
+    
+### Plots of chemicals thant have positive relation with the wine quality
+
+```{r echo=FALSE}
+ggplot(aes(x = citric.acid, y = alcohol, color = Gquality), 
+       data = subset(df_new, Gquality == 5 | Gquality == 6 | Gquality == 7 | Gquality == 8)) +
+  geom_point(alpha = 0.5) 
+```
+
+Alcohol has a stronger influence on the wine quality. Meanwhile, the influnce of citric.acid is less obvious.
+
+```{r echo=FALSE}
+ggplot(aes(x = citric.acid, y = sulphates, color = Gquality), 
+       data = subset(df_new,Gquality == 5 | Gquality == 6 | Gquality == 7 | Gquality == 8)) +
+  geom_point(alpha = 0.3) 
+
+```
+
+The change of the sulphates and citric.acid did not have a strong impact on the wine quality. There's not a lot information from this plot.
+
+```{r echo=FALSE}
+ggplot(aes(x = citric.acid, y = fixed.acidity, color = Gquality), 
+       data = subset(df_new,  Gquality == 5 |Gquality == 6 | Gquality == 7 |Gquality == 8)) +
+  geom_point(alpha = 0.5) 
+```
+
+We can see the relation between fixed.acidity and citric.acid, but not a relation with the wine quality
+
+```{r echo=FALSE}
+ggplot(aes(x = alcohol, y = sulphates, color = Gquality), 
+       data = subset(df_new, Gquality == 5 |Gquality == 6 |  Gquality == 7 |Gquality == 8)) +
+  geom_point(alpha = 0.5) 
+```
+
+When sulphates and alcohol increase together, the quality of wine increases.
+
+```{r echo=FALSE}
+ggplot(aes(x = alcohol, y = fixed.acidity, color = Gquality), 
+       data = subset(df_new, Gquality == 5 |Gquality == 6 | Gquality == 7 | Gquality == 8)) +
+  geom_point(alpha = 0.5)
+```
+
+Alcohol has a stronger influence than the fixed.acidity on the wine quality.
+
+```{r echo=FALSE}
+ggplot(aes(x = sulphates, y = fixed.acidity, color = Gquality), 
+       data = subset(df_new, Gquality == 5 |Gquality == 6 | Gquality == 7 | Gquality == 8)) +
+  geom_point(alpha = 0.5)
+```
+
+When fixed.acidity and sulphates increase together, sulphates has a stronger influence on the wine quality.
+
+### Plots of chemicals thant have negative relation with the wine quality
+
+```{r echo=FALSE}
+ggplot(aes(x = volatile.acidity, y = density, color = Gquality), 
+       data = subset(df_new, Gquality == 5 |Gquality == 6 | Gquality == 7 | Gquality == 8)) +
+  geom_point(alpha = 0.5)
+
+```
+
+Denstity and volatile.acidity together have a strong relation wine the wine quality. The wine quality increase, when these two chemicals decrease.
+    
+```{r echo=FALSE}
+ggplot(aes(x = volatile.acidity, y = pH, color = Gquality), 
+       data = subset(df_new,  Gquality == 5 |Gquality == 6 |Gquality == 7 | Gquality == 8)) +
+  geom_point(alpha = 0.5)
+```
+
+Volatile.acidity has a stronger influence on the wine quality. 
+
+```{r echo=FALSE }
+ggplot(aes(x = volatile.acidity, y = total.sulfur.dioxide, color = Gquality), 
+       data = subset(df_new, Gquality == 5 |Gquality == 6 | Gquality == 7 | Gquality == 8)) +
+  geom_point(alpha = 0.5)
+```
+
+Total.sulfur.dioxide and volatile.acidity together have a strong relation wine the wine quality. The wine quality increase, when these two chemicals decrease.
+
+```{r echo=FALSE}
+ggplot(aes(x = density, y = pH, color = Gquality), 
+       data = subset(df_new, Gquality == 5 |Gquality == 6 | Gquality == 7 | Gquality == 8)) +
+  geom_point(alpha = 0.5)
+```
+
+We can see the negative relation between pH and density.
+
+```{r echo=FALSE}
+ggplot(aes(x = density, y = total.sulfur.dioxide, color = Gquality), 
+       data = subset(df_new, Gquality == 5 |Gquality == 6 | Gquality == 7 | Gquality == 8)) +
+  geom_point(alpha = 0.5)
+```
+
+Total.sulfur.dioxide has stronger influence on the wine quality. Generally, higer quality wine has a lower value of total.sulfur.dioxde.
+   
+```{r echo=FALSE}
+ggplot(aes(x = pH, y = total.sulfur.dioxide, color = Gquality), 
+       data = subset(df_new, Gquality == 5 |Gquality == 6 | Gquality == 7 | Gquality == 8)) +
+  geom_point(alpha = 0.5)
+```
+   
+Total.sulfur.dioxide has stronger influence on the wine quality. Generally, higer quality wine has a lower value of total.sulfur.dioxde.
+
+### Plots of chemicals have positive or negative relation with the wine quality
+
+```{r echo=FALSE}
+ggplot(aes(x = fixed.acidity, y = pH, color = Gquality), 
+       data = subset(df_new, Gquality == 5 | Gquality == 6 | Gquality == 7 | Gquality == 8)) +
+  geom_point(alpha = 0.5) 
+```
+
+There's no obvious relation between the pH/fixed.acidity and the wine quality.
+   
+```{r echo=FALSE }
+ggplot(aes(x = fixed.acidity, y = citric.acid, color = Gquality), 
+       data = subset(df_new, Gquality == 5 | Gquality == 6 | Gquality == 7 | Gquality == 8)) +
+  geom_point(alpha = 0.5) 
+```
+
+There's no obvious relation between the citric.acid/fixed.acidity and the wine quality.
+   
+```{r echo=FALSE}
+ggplot(aes(x = fixed.acidity, y = density, color = Gquality), 
+       data = subset(df_new, Gquality == 5 |
+                      Gquality == 6 |Gquality == 7 | Gquality == 8)) +
+  geom_point(alpha = 0.5)
+
+```
+  
+when density decrease and fixed.acidity increase, the wine quality increase.
+
+```{r echo=FALSE}
+ggplot(aes(x = volatile.acidity, y = citric.acid, color = Gquality), 
+       data = subset(df_new, 
+                     Gquality == 5 | Gquality == 6 |Gquality == 7 | Gquality == 8)) +
+  geom_point(alpha = 0.5)
+```
+
+Most of the good quality wine have a high citric.acid and a low volatile.acidity.
+
+
+   
+```{r echo=FALSE}
+ggplot(aes(x = citric.acid, y = pH, color = Gquality), 
+       data = subset(df_new, 
+                     Gquality == 5 | Gquality == 6 |Gquality == 7 | Gquality == 8)) +
+  geom_point(alpha = 0.5)
+```
+
+Most wine have a higher level of citric.acid.
+
+```{r echo=FALSE}
+ggplot(aes(x = free.sulfur.dioxide, y = total.sulfur.dioxide, color = Gquality), 
+       data = subset(df_new, 
+                     Gquality == 5 | Gquality == 6 |Gquality == 7 | Gquality == 8)) +
+  geom_point(alpha = 0.5)
+
+```
+
+There's no obvious relationg between the sulfur.dioxides and the wine quality.
+    
+```{r echo=FALSE}
+ggplot(aes(x = alcohol, y = density, color = Gquality), 
+       data = subset(df_new, 
+                     Gquality == 5 | Gquality == 6 |Gquality == 7 | Gquality == 8)) +
+  geom_point(alpha = 0.5)
+```
+
+Alcohol has a higher influence on the wine quality, the higher level of alcohol, the higher level of wine quality. 
+    
+###Summary
+
+I put the chemicals into 3 groups to explore their relations with the wine quality. The chemicals are devided into chemicals that relations to each other, chemicals that have positive relations with the wine quality, chemicals that have negative relations with the wine quality. In each goup, I found features that interacted with each other. For example, in the group of the chemicals that have positive relations with the wine quality, sulphates and alcohol has cumulative influence on the wine quality. The higher the level of sulphates and alcohol, the higher the level of wine quality is. I also found some chemicals have strongers influence on the wine quality.For example, alcohol has a very strong influence on the wine quality compared to other chemcials.
+
+# Final Plots and Summary
+
+### Plot One
+
+```{r echo=FALSE}
+ggplot(aes(x = Gquality, y = alcohol), data = df_new) +
+  geom_boxplot()+
+  ggtitle("Alcohol and wine quality")+
+  xlab("wine quality")+
+  ylab("alcohol - % by volume")
+```
+
+
+### Description One
+
+From the boxplot, we can see there's a position relation between alcohol and wine quality. Especially for good wines which are rated for 5,6,7,8. The boxplot helps to show the relations between the chemicals and the wine quality. Further exploration will be based one the analysis on the boxplot.
+
+### Plot Two
+```{r echo=FALSE, Plot_Two}
+ggplot(aes(x = alcohol, y = sulphates, color = Gquality), 
+       data = subset(df_new, Gquality == 5 |Gquality == 6 |  Gquality == 7 |Gquality == 8)) +
+  geom_point(alpha = 0.5, position = 'jitter')+
+  scale_color_brewer(type = 'div',
+                     guide = guide_legend(title = 'wine quality', reverse = T,
+                                          override.aes = list(alpha = 1, size = 2)))+
+  ggtitle("Sulphates, alcohol and wine quality")+
+  xlab("alcohol - % by volume")+
+  ylab("sulphates - g/dm3")
+```
+
+### Description Two
+
+According to the bivariate analysis, suophates and alcohol both have a positive relation with the wine quality seperately. From this plot, sulphates and alcohol has cumulative influence on the wine quality together. When they increase, the wine quality increase.
+
+### Plot Three
+```{r echo=FALSE, Plot_Three}
+ggplot(aes(x = alcohol, y = density, color = Gquality), 
+       data = subset(df_new, 
+                     Gquality == 5 | Gquality == 6 |Gquality == 7 | Gquality == 8)) +
+  geom_point(alpha = 0.5,position = 'jitter')+
+  scale_color_brewer(type = 'div',
+                     guide = guide_legend(title = 'wine quality', reverse = T,
+                                          override.aes = list(alpha = 1, size = 2)))+
+  ggtitle("Density, alcohol and wine quality")+
+  xlab("alcohol - % by volume")+
+  ylab("density - g/cm3")
+```
+
+
+### Description Three
+
+Seperately, the density has a negative with the wine quality, and alcohol has a stronger positive with the wine quality. Together, we can see alcohol still has a stronger influence with the wine quality. The wine quality increase with the alcohol level.
+
+# Reflection
+   
+The whole dataset is about chemicals, which I totally have no ideas about. When I first started, I was not able to find a clue. But, after I conducted the univariate and bivariate nalysis, I gradually got some ideas of the data. I was able to make a plan to the conduct further exploration. Since I got some skills of machine learing, I may want to use machine learning to work on these dataset. Besides exploring the data, the machine learning model may be able to predict the quality of a wine based on the chemical values.
+   
